@@ -1,168 +1,177 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getLoginUrl } from "@/const";
-import { Link } from "wouter";
-import { Sparkles, Newspaper, Video, Filter, Bell } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, AlertCircle, ExternalLink } from "lucide-react";
+
+interface NewsItem {
+  title?: string;
+  link?: string;
+  pubDate?: string;
+  content?: string;
+  contentSnippet?: string;
+}
 
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const [selectedItem, setSelectedItem] = useState<NewsItem | null>(null);
+
+  // tRPCでAIニュースを取得
+  const { data: aiNewsData, isLoading, error } = trpc.rss.getAINews.useQuery();
+
+  const claudeNews: NewsItem[] = aiNewsData?.claude || [];
+  const chatgptNews: NewsItem[] = aiNewsData?.chatgpt || [];
+  const allAINews: NewsItem[] = aiNewsData?.allAI || [];
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "";
+    try {
+      return new Date(dateString).toLocaleDateString("ja-JP", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const NewsCard = ({ item }: { item: NewsItem }) => (
+    <Card
+      className="cursor-pointer hover:shadow-lg transition-shadow"
+      onClick={() => setSelectedItem(item)}
+    >
+      <CardHeader>
+        <CardTitle className="text-base line-clamp-2">{item.title}</CardTitle>
+        <CardDescription>{formatDate(item.pubDate)}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground line-clamp-3">{item.contentSnippet}</p>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* ナビゲーション */}
-      <nav className="border-b border-slate-700 bg-slate-900/50 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-amber-400" />
-            <h1 className="text-xl font-bold text-white">最新AI情報</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            {isAuthenticated ? (
-              <>
-                <Link href="/news">
-                  <Button variant="ghost" className="text-slate-300 hover:text-white">
-                    ニュース
-                  </Button>
-                </Link>
-                <Link href="/videos">
-                  <Button variant="ghost" className="text-slate-300 hover:text-white">
-                    動画
-                  </Button>
-                </Link>
-              </>
-            ) : (
-              <a href={getLoginUrl()}>
-                <Button className="bg-amber-500 hover:bg-amber-600 text-white">
-                  ログイン
-                </Button>
-              </a>
-            )}
-          </div>
+      {/* ヘッダー */}
+      <div className="border-b border-slate-700 bg-slate-900/50 backdrop-blur">
+        <div className="container py-6">
+          <h1 className="text-3xl font-bold text-white">最新AI情報</h1>
+          <p className="text-slate-400 mt-2">Claude・ChatGPT・AI関連の最新ニュース</p>
         </div>
-      </nav>
+      </div>
 
-      {/* ヒーロー */}
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <div className="mb-8">
-          <h2 className="text-5xl md:text-6xl font-bold text-white mb-4">
-            AI最新情報を
-            <br />
-            毎日お届け
-          </h2>
-          <p className="text-xl text-slate-300 mb-8">
-            Claude・ChatGPT関連のニュースとYouTube動画を自動収集・要約。
-            <br />
-            エレガントなUIで、最新のAI情報をいつでも確認できます。
-          </p>
-        </div>
-
-        {isAuthenticated ? (
-          <div className="flex gap-4 justify-center">
-            <Link href="/news">
-              <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-white">
-                ニュースを見る
-              </Button>
-            </Link>
-            <Link href="/videos">
-              <Button size="lg" variant="outline" className="border-slate-400 text-white hover:bg-slate-800">
-                動画を見る
-              </Button>
-            </Link>
+      {/* メインコンテンツ */}
+      <div className="container py-8">
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+            <span className="ml-2 text-slate-300">ニュースを読み込み中...</span>
           </div>
-        ) : (
-          <a href={getLoginUrl()}>
-            <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-white">
-              ログインして始める
-            </Button>
-          </a>
+        )}
+
+        {error && (
+          <div className="bg-red-900/20 border border-red-700 rounded-lg p-4 flex items-start gap-3 mb-6">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-red-200">エラーが発生しました</h3>
+              <p className="text-red-100 text-sm">
+                {error instanceof Error ? error.message : "ニュースの取得に失敗しました。後でもう一度試してください。"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!isLoading && (claudeNews.length > 0 || chatgptNews.length > 0 || allAINews.length > 0) && (
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-800">
+              <TabsTrigger value="all">すべて</TabsTrigger>
+              <TabsTrigger value="claude">Claude関連</TabsTrigger>
+              <TabsTrigger value="chatgpt">ChatGPT関連</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all" className="space-y-4 mt-6">
+              {allAINews.length === 0 ? (
+                <p className="text-slate-400 text-center py-8">ニュースがありません</p>
+              ) : (
+                <div className="grid gap-4">
+                  {allAINews.map((item, idx) => (
+                    <NewsCard key={`all-${idx}`} item={item} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="claude" className="space-y-4 mt-6">
+              {claudeNews.length === 0 ? (
+                <p className="text-slate-400 text-center py-8">ニュースがありません</p>
+              ) : (
+                <div className="grid gap-4">
+                  {claudeNews.map((item, idx) => (
+                    <NewsCard key={`claude-${idx}`} item={item} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="chatgpt" className="space-y-4 mt-6">
+              {chatgptNews.length === 0 ? (
+                <p className="text-slate-400 text-center py-8">ニュースがありません</p>
+              ) : (
+                <div className="grid gap-4">
+                  {chatgptNews.map((item, idx) => (
+                    <NewsCard key={`chatgpt-${idx}`} item={item} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {!isLoading && claudeNews.length === 0 && chatgptNews.length === 0 && allAINews.length === 0 && !error && (
+          <div className="text-center py-12">
+            <p className="text-slate-400">ニュースを読み込めませんでした</p>
+          </div>
         )}
       </div>
 
-      {/* 特徴 */}
-      <div className="max-w-7xl mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-slate-800 border-slate-700">
+      {/* 詳細表示モーダル */}
+      {selectedItem && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={() => setSelectedItem(null)}
+        >
+          <Card
+            className="w-full max-w-2xl max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <CardHeader>
-              <Newspaper className="w-8 h-8 text-amber-400 mb-2" />
-              <CardTitle className="text-white">自動収集</CardTitle>
+              <CardTitle>{selectedItem.title}</CardTitle>
+              <CardDescription>{formatDate(selectedItem.pubDate)}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-slate-300 text-sm">
-                毎日自動でAIニュースを収集・更新。最新情報を見落としません。
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <Sparkles className="w-8 h-8 text-amber-400 mb-2" />
-              <CardTitle className="text-white">AI要約</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-300 text-sm">
-                LLMが記事を日本語で要約。忙しい時も内容を素早く把握できます。
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <Video className="w-8 h-8 text-amber-400 mb-2" />
-              <CardTitle className="text-white">動画対応</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-300 text-sm">
-                YouTube動画も自動収集。ニュースと動画を一箇所で確認できます。
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <Filter className="w-8 h-8 text-amber-400 mb-2" />
-              <CardTitle className="text-white">フィルタリング</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-300 text-sm">
-                Claude・ChatGPT・その他AIでカテゴリ分け。興味のある情報だけ見られます。
-              </p>
+            <CardContent className="space-y-4">
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {selectedItem.content || selectedItem.contentSnippet}
+                </p>
+              </div>
+              {selectedItem.link && (
+                <a
+                  href={selectedItem.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+                >
+                  元記事を読む
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
             </CardContent>
           </Card>
         </div>
-      </div>
-
-      {/* 対応カテゴリ */}
-      <div className="max-w-7xl mx-auto px-4 py-16 border-t border-slate-700">
-        <h3 className="text-2xl font-bold text-white mb-8 text-center">対応カテゴリ</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-6 border border-purple-700">
-            <h4 className="text-lg font-bold text-white mb-2">Claude関連</h4>
-            <p className="text-purple-200">
-              AnthropicのClaudeに関する最新ニュース、アップデート、使用例を配信します。
-            </p>
-          </div>
-          <div className="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-6 border border-green-700">
-            <h4 className="text-lg font-bold text-white mb-2">ChatGPT関連</h4>
-            <p className="text-green-200">
-              OpenAIのChatGPTに関する最新情報、機能追加、プラグイン情報をお届けします。
-            </p>
-          </div>
-          <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-6 border border-blue-700">
-            <h4 className="text-lg font-bold text-white mb-2">その他AI</h4>
-            <p className="text-blue-200">
-              Google Gemini、Copilot、その他のAIツールの最新情報も配信します。
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* フッター */}
-      <div className="border-t border-slate-700 bg-slate-900/50 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-400 text-sm">
-          <p>© 2026 最新AI情報. All rights reserved.</p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

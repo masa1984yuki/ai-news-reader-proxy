@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { scheduledCollectionHandler } from "../handlers/scheduledCollectionHandler";
+import { newsScheduleHandler } from "../handlers/newsScheduleHandler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,8 +39,9 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
-  // Scheduled collection endpoint (must be before tRPC)
+  // Scheduled collection endpoints (must be before tRPC)
   app.post("/api/scheduled/collection", scheduledCollectionHandler);
+  app.post("/api/scheduled/news", newsScheduleHandler);
 
   // tRPC API
   app.use(

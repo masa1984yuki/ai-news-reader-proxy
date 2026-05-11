@@ -40,12 +40,12 @@ export default function Home() {
 
   const NewsCard = ({ item }: { item: NewsItem }) => (
     <Card
-      className="cursor-pointer hover:shadow-lg transition-shadow"
+      className="cursor-pointer hover:shadow-lg transition-shadow border-border/50"
       onClick={() => setSelectedItem(item)}
     >
       <CardHeader>
-        <CardTitle className="text-base line-clamp-2">{item.title}</CardTitle>
-        <CardDescription>{formatDate(item.pubDate)}</CardDescription>
+        <CardTitle className="text-base line-clamp-2 text-foreground">{item.title}</CardTitle>
+        <CardDescription className="text-muted-foreground">{formatDate(item.pubDate)}</CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground line-clamp-3">{item.contentSnippet}</p>
@@ -54,12 +54,12 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="border-b border-slate-700 bg-slate-900/50 backdrop-blur">
+      <div className="border-b border-border bg-card/30 backdrop-blur">
         <div className="container py-6">
-          <h1 className="text-3xl font-bold text-white">最新AI情報</h1>
-          <p className="text-slate-400 mt-2">Claude・ChatGPT・AI関連の最新ニュース</p>
+          <h1 className="text-3xl font-bold text-foreground">最新AI情報</h1>
+          <p className="text-muted-foreground mt-2">Claude・ChatGPT・AI関連の最新ニュース</p>
         </div>
       </div>
 
@@ -67,17 +67,17 @@ export default function Home() {
       <div className="container py-8">
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-            <span className="ml-2 text-slate-300">ニュースを読み込み中...</span>
+            <Loader2 className="w-8 h-8 animate-spin text-accent" />
+            <span className="ml-2 text-muted-foreground">ニュースを読み込み中...</span>
           </div>
         )}
 
         {error && (
-          <div className="bg-red-900/20 border border-red-700 rounded-lg p-4 flex items-start gap-3 mb-6">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-start gap-3 mb-6">
+            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-red-200">エラーが発生しました</h3>
-              <p className="text-red-100 text-sm">
+              <h3 className="font-semibold text-destructive">エラーが発生しました</h3>
+              <p className="text-destructive/80 text-sm">
                 {error instanceof Error ? error.message : "ニュースの取得に失敗しました。後でもう一度試してください。"}
               </p>
             </div>
@@ -86,7 +86,7 @@ export default function Home() {
 
         {!isLoading && (claudeNews.length > 0 || chatgptNews.length > 0 || allAINews.length > 0) && (
           <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-800">
+            <TabsList className="grid w-full grid-cols-3 bg-card">
               <TabsTrigger value="all">すべて</TabsTrigger>
               <TabsTrigger value="claude">Claude関連</TabsTrigger>
               <TabsTrigger value="chatgpt">ChatGPT関連</TabsTrigger>
@@ -94,7 +94,7 @@ export default function Home() {
 
             <TabsContent value="all" className="space-y-4 mt-6">
               {allAINews.length === 0 ? (
-                <p className="text-slate-400 text-center py-8">ニュースがありません</p>
+                <p className="text-muted-foreground text-center py-8">ニュースがありません</p>
               ) : (
                 <div className="grid gap-4">
                   {allAINews.map((item, idx) => (
@@ -106,7 +106,7 @@ export default function Home() {
 
             <TabsContent value="claude" className="space-y-4 mt-6">
               {claudeNews.length === 0 ? (
-                <p className="text-slate-400 text-center py-8">ニュースがありません</p>
+                <p className="text-muted-foreground text-center py-8">ニュースがありません</p>
               ) : (
                 <div className="grid gap-4">
                   {claudeNews.map((item, idx) => (
@@ -118,7 +118,7 @@ export default function Home() {
 
             <TabsContent value="chatgpt" className="space-y-4 mt-6">
               {chatgptNews.length === 0 ? (
-                <p className="text-slate-400 text-center py-8">ニュースがありません</p>
+                <p className="text-muted-foreground text-center py-8">ニュースがありません</p>
               ) : (
                 <div className="grid gap-4">
                   {chatgptNews.map((item, idx) => (
@@ -132,7 +132,7 @@ export default function Home() {
 
         {!isLoading && claudeNews.length === 0 && chatgptNews.length === 0 && allAINews.length === 0 && !error && (
           <div className="text-center py-12">
-            <p className="text-slate-400">ニュースを読み込めませんでした</p>
+            <p className="text-muted-foreground">ニュースを読み込めませんでした</p>
           </div>
         )}
       </div>
@@ -140,7 +140,7 @@ export default function Home() {
       {/* 詳細表示モーダル */}
       {selectedItem && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           onClick={() => setSelectedItem(null)}
         >
           <Card
@@ -148,12 +148,12 @@ export default function Home() {
             onClick={(e) => e.stopPropagation()}
           >
             <CardHeader>
-              <CardTitle>{selectedItem.title}</CardTitle>
+              <CardTitle className="text-foreground">{selectedItem.title}</CardTitle>
               <CardDescription>{formatDate(selectedItem.pubDate)}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="prose prose-sm max-w-none dark:prose-invert">
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                <p className="text-sm text-foreground whitespace-pre-wrap">
                   {selectedItem.content || selectedItem.contentSnippet}
                 </p>
               </div>
@@ -162,7 +162,7 @@ export default function Home() {
                   href={selectedItem.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/80 text-accent-foreground rounded-lg transition-colors"
                 >
                   元記事を読む
                   <ExternalLink className="w-4 h-4" />

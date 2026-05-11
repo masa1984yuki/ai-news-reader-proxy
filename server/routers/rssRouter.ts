@@ -71,7 +71,7 @@ export const rssRouter = router({
         "https://news.google.com/rss/search?q=AI&hl=ja&gl=JP&ceid=JP:ja"
       );
 
-      const claudeItems: RSSItem[] = (claudeFeed.items || []).slice(0, 10).map((item) => ({
+      const claudeItems: RSSItem[] = (claudeFeed.items || []).slice(0, 20).map((item) => ({
         title: item.title,
         link: item.link,
         pubDate: item.pubDate,
@@ -79,7 +79,7 @@ export const rssRouter = router({
         contentSnippet: item.contentSnippet,
       }));
 
-      const chatgptItems: RSSItem[] = (chatgptFeed.items || []).slice(0, 10).map((item) => ({
+      const chatgptItems: RSSItem[] = (chatgptFeed.items || []).slice(0, 20).map((item) => ({
         title: item.title,
         link: item.link,
         pubDate: item.pubDate,
@@ -87,7 +87,7 @@ export const rssRouter = router({
         contentSnippet: item.contentSnippet,
       }));
 
-      const allAIItems: RSSItem[] = (allAIFeed.items || []).slice(0, 10).map((item) => ({
+      const allAIItems: RSSItem[] = (allAIFeed.items || []).slice(0, 20).map((item) => ({
         title: item.title,
         link: item.link,
         pubDate: item.pubDate,

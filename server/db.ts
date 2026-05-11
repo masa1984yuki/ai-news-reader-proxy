@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, newsArticles, youtubeVideos, collectionLogs, InsertNewsArticle, InsertYoutubeVideo, InsertCollectionLog } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,188 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+/**
+ * ニュース記事を取得
+ * @param limit 取得数
+ * @param offset オフセット
+ * @param category カテゴリ（省略可能）
+ */
+export async function getNewsArticles(
+  limit: number = 20,
+  offset: number = 0,
+  category?: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const conditions = [];
+    if (category && ["Claude関連", "ChatGPT関連", "その他AI"].includes(category)) {
+      conditions.push(eq(newsArticles.category, category as any));
+    }
+
+    const query = db
+      .select()
+      .from(newsArticles)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(newsArticles.publishedAt))
+      .limit(limit)
+      .offset(offset);
+
+    return query;
+  } catch (error) {
+    console.error("[Database] Failed to get news articles:", error);
+    return [];
+  }
+}
+
+/**
+ * YouTube動画を取得
+ * @param limit 取得数
+ * @param offset オフセット
+ * @param category カテゴリ（省略可能）
+ */
+export async function getYoutubeVideos(
+  limit: number = 20,
+  offset: number = 0,
+  category?: string
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const conditions = [];
+    if (category && ["Claude関連", "ChatGPT関連", "その他AI"].includes(category)) {
+      conditions.push(eq(youtubeVideos.category, category as any));
+    }
+
+    const query = db
+      .select()
+      .from(youtubeVideos)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(youtubeVideos.publishedAt))
+      .limit(limit)
+      .offset(offset);
+
+    return query;
+  } catch (error) {
+    console.error("[Database] Failed to get YouTube videos:", error);
+    return [];
+  }
+}
+
+/**
+ * ニュース記事を保存（重複排除）
+ */
+export async function saveNewsArticles(articles: InsertNewsArticle[]) {
+  const db = await getDb();
+  if (!db) return 0;
+
+  try {
+    if (articles.length === 0) return 0;
+
+    // 既存のURLをチェック
+    const urls = articles.map(a => a.sourceUrl);
+    const existing = await db
+      .select({ sourceUrl: newsArticles.sourceUrl })
+      .from(newsArticles)
+      .where(inArray(newsArticles.sourceUrl, urls));
+
+    const existingUrls = new Set(existing.map(e => e.sourceUrl));
+    const newArticles = articles.filter(a => !existingUrls.has(a.sourceUrl));
+
+    if (newArticles.length === 0) return 0;
+
+    await db.insert(newsArticles).values(newArticles);
+    return newArticles.length;
+  } catch (error) {
+    console.error("[Database] Failed to save news articles:", error);
+    return 0;
+  }
+}
+
+/**
+ * YouTube動画を保存（重複排除）
+ */
+export async function saveYoutubeVideos(videos: InsertYoutubeVideo[]) {
+  const db = await getDb();
+  if (!db) return 0;
+
+  try {
+    if (videos.length === 0) return 0;
+
+    // 既存のvideoIdをチェック
+    const videoIds = videos.map(v => v.videoId);
+    const existing = await db
+      .select({ videoId: youtubeVideos.videoId })
+      .from(youtubeVideos)
+      .where(inArray(youtubeVideos.videoId, videoIds));
+
+    const existingIds = new Set(existing.map(e => e.videoId));
+    const newVideos = videos.filter(v => !existingIds.has(v.videoId));
+
+    if (newVideos.length === 0) return 0;
+
+    await db.insert(youtubeVideos).values(newVideos);
+    return newVideos.length;
+  } catch (error) {
+    console.error("[Database] Failed to save YouTube videos:", error);
+    return 0;
+  }
+}
+
+/**
+ * 収集実行ログを記録
+ */
+export async function logCollection(log: InsertCollectionLog) {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    await db.insert(collectionLogs).values(log);
+  } catch (error) {
+    console.error("[Database] Failed to log collection:", error);
+  }
+}
+
+/**
+ * 最新のニュース記事を取得（詳細表示用）
+ */
+export async function getNewsArticleById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  try {
+    const result = await db
+      .select()
+      .from(newsArticles)
+      .where(eq(newsArticles.id, id))
+      .limit(1);
+
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error("[Database] Failed to get news article by ID:", error);
+    return undefined;
+  }
+}
+
+/**
+ * YouTube動画を取得（詳細表示用）
+ */
+export async function getYoutubeVideoById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  try {
+    const result = await db
+      .select()
+      .from(youtubeVideos)
+      .where(eq(youtubeVideos.id, id))
+      .limit(1);
+
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error("[Database] Failed to get YouTube video by ID:", error);
+    return undefined;
+  }
+}

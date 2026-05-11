@@ -175,3 +175,25 @@
     }
   }
 }
+/* Elegant Design Styles for Latest AI News */
+@layer components {
+  .elegant-gradient {
+    @apply bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900;
+  }
+
+  .elegant-card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:scale-105;
+  }
+
+  .elegant-text-gradient {
+    @apply bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent;
+  }
+
+  .elegant-border {
+    @apply border border-slate-200 dark:border-slate-700;
+  }
+
+  .elegant-shadow {
+    @apply shadow-lg dark:shadow-2xl;
+  }
+}

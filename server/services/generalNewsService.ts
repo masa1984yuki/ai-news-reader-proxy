@@ -135,8 +135,15 @@ export async function summarizeNews(newsItems: NewsItem[]): Promise<SummaryItem[
     const content = response.choices[0]?.message?.content;
     if (typeof content === "string") {
       try {
+        // ```json``` ブロックから JSON を抽出
+        let jsonContent = content;
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (jsonMatch) {
+          jsonContent = jsonMatch[1].trim();
+        }
+        
         // JSON形式の検証
-        const parsed = JSON.parse(content);
+        const parsed = JSON.parse(jsonContent);
         if (Array.isArray(parsed) && parsed.length > 0) {
           // 最大3件に制限し、各項目を検証
           const limited = parsed.slice(0, 3).map((item: any) => ({

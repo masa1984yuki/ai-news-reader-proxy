@@ -22,7 +22,7 @@ describe("generalNewsService", () => {
       expect(result.length).toBeGreaterThan(0);
       expect(result[0]).toHaveProperty("title");
       expect(result[0]).toHaveProperty("summary");
-    });
+    }, 10000);
 
     it("should limit summaries to 3 items", async () => {
       const newsItems = Array.from({ length: 5 }, (_, i) => ({

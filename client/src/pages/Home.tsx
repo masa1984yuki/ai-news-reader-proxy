@@ -8,6 +8,7 @@ import { Loader2, AlertCircle, ExternalLink, TrendingUp } from "lucide-react";
 interface NewsItem {
   title?: string;
   link?: string;
+  sourceUrl?: string;
   pubDate?: string;
   content?: string;
   contentSnippet?: string;
@@ -16,6 +17,7 @@ interface NewsItem {
 interface SummaryItem {
   title: string;
   summary: string;
+  sourceUrl?: string;
 }
 
 export default function Home() {
@@ -47,20 +49,37 @@ export default function Home() {
     }
   };
 
-  const NewsCard = ({ item }: { item: NewsItem }) => (
-    <Card
-      className="cursor-pointer hover:shadow-lg transition-shadow border-border/50"
-      onClick={() => setSelectedItem(item)}
-    >
-      <CardHeader>
-        <CardTitle className="text-base line-clamp-2 text-foreground">{item.title}</CardTitle>
-        <CardDescription className="text-muted-foreground">{formatDate(item.pubDate)}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground line-clamp-3">{item.contentSnippet}</p>
-      </CardContent>
-    </Card>
-  );
+  const NewsCard = ({ item }: { item: NewsItem }) => {
+    const sourceUrl = item.link || item.sourceUrl;
+    return (
+      <Card className="border-border/50 hover:shadow-lg transition-shadow">
+        <CardHeader
+          className="cursor-pointer"
+          onClick={() => setSelectedItem(item)}
+        >
+          <CardTitle className="text-base line-clamp-2 text-foreground">{item.title}</CardTitle>
+          <CardDescription className="text-muted-foreground">{formatDate(item.pubDate)}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground line-clamp-3">{item.contentSnippet}</p>
+            {sourceUrl && (
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-accent/10 text-accent hover:bg-accent/20 rounded transition-colors"
+              >
+                ソース元へ
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const SummarySection = ({ title, icon, summaries }: { title: string; icon: string; summaries: SummaryItem[] }) => {
     if (!summaries || summaries.length === 0) {
@@ -75,6 +94,17 @@ export default function Home() {
             <div key={idx} className="text-sm text-foreground/80 leading-relaxed">
               <span className="font-medium">{idx + 1}. {item.title}</span>
               <p className="text-xs text-foreground/60 mt-1">{item.summary}</p>
+              {item.sourceUrl && (
+                <a
+                  href={item.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-1 text-xs text-accent hover:text-accent/80 transition-colors"
+                >
+                  ソース元
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
             </div>
           ))}
         </div>
@@ -210,9 +240,9 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-foreground/80 leading-relaxed">{selectedItem.content || selectedItem.contentSnippet}</p>
-              {selectedItem.link && (
+              {(selectedItem.link || selectedItem.sourceUrl) && (
                 <a
-                  href={selectedItem.link}
+                  href={selectedItem.link || selectedItem.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:opacity-90 transition-opacity"

@@ -11,6 +11,7 @@ interface NewsItem {
 }
 
 interface SummaryItem {
+  sourceUrl?: string;
   title: string;
   summary: string;
 }
@@ -113,7 +114,8 @@ export async function summarizeNews(newsItems: NewsItem[]): Promise<SummaryItem[
     .map((item, index) => {
       const title = decodeHtmlEntities(item.title);
       const desc = item.description ? decodeHtmlEntities(item.description) : "";
-      return `${index + 1}. ${title}\n${desc}`;
+      const link = item.link ? `\nURL: ${item.link}` : "";
+      return `${index + 1}. ${title}\n${desc}${link}`;
     })
     .join("\n\n");
 
@@ -149,6 +151,7 @@ export async function summarizeNews(newsItems: NewsItem[]): Promise<SummaryItem[
           const limited = parsed.slice(0, 3).map((item: any) => ({
             title: decodeHtmlEntities(String(item.title || "タイトル不明")).substring(0, 100),
             summary: decodeHtmlEntities(String(item.summary || "要約不明")).substring(0, 50),
+            sourceUrl: item.sourceUrl || undefined,
           }));
           return limited;
         }

@@ -22,6 +22,13 @@
       "when": 1778544526927,
       "tag": "0002_bright_nehzno",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1778546077203,
+      "tag": "0003_friendly_white_tiger",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `dailySummaries` MODIFY COLUMN `sourceType` enum('economy','technology','general') NOT NULL;

@@ -16,12 +16,47 @@ interface SummaryItem {
 }
 
 /**
- * Google News RSS から経済・技術ニュースを取得
+ * HTML エンティティをデコード
+ */
+function decodeHtmlEntities(text: string): string {
+  const entities: Record<string, string> = {
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&#39;": "'",
+    "&apos;": "'",
+    "&nbsp;": " ",
+    "&copy;": "©",
+    "&reg;": "®",
+    "&deg;": "°",
+  };
+
+  let decoded = text;
+  for (const [entity, char] of Object.entries(entities)) {
+    decoded = decoded.replace(new RegExp(entity, "g"), char);
+  }
+
+  // 数値エンティティ（&#123; など）をデコード
+  decoded = decoded.replace(/&#(\d+);/g, (match, code) => {
+    return String.fromCharCode(parseInt(code, 10));
+  });
+
+  // 16進数エンティティ（&#x1F; など）をデコード
+  decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (match, code) => {
+    return String.fromCharCode(parseInt(code, 16));
+  });
+
+  return decoded;
+}
+
+/**
+ * Google News RSS から経済・技術・一般ニュースを取得
  */
 export async function fetchGeneralNews(keyword: string): Promise<NewsItem[]> {
   try {
     const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=ja&gl=JP&ceid=JP:ja`;
-    
+
     const response = await fetch(rssUrl);
     if (!response.ok) {
       console.error(`[General News] Failed to fetch RSS: ${response.status}`);
@@ -29,30 +64,33 @@ export async function fetchGeneralNews(keyword: string): Promise<NewsItem[]> {
     }
 
     const text = await response.text();
-    
+
     // 簡易的な XML パース（正規表現を使用）
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     const items: NewsItem[] = [];
-    
+
     let match;
     while ((match = itemRegex.exec(text)) !== null) {
       const itemContent = match[1];
-      
+
       const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(itemContent);
       const descMatch = /<description>([\s\S]*?)<\/description>/.exec(itemContent);
       const linkMatch = /<link>([\s\S]*?)<\/link>/.exec(itemContent);
       const pubDateMatch = /<pubDate>([\s\S]*?)<\/pubDate>/.exec(itemContent);
-      
+
       if (titleMatch) {
+        const title = titleMatch[1].replace(/<[^>]*>/g, "");
+        const description = descMatch ? descMatch[1].replace(/<[^>]*>/g, "") : undefined;
+
         items.push({
-          title: titleMatch[1].replace(/<[^>]*>/g, ""),
-          description: descMatch ? descMatch[1].replace(/<[^>]*>/g, "") : undefined,
+          title: decodeHtmlEntities(title),
+          description: description ? decodeHtmlEntities(description) : undefined,
           link: linkMatch ? linkMatch[1] : undefined,
           pubDate: pubDateMatch ? pubDateMatch[1] : undefined,
         });
       }
     }
-    
+
     return items.slice(0, 5); // トップ5を返す
   } catch (error) {
     console.error("[General News] Error fetching news:", error);
@@ -72,7 +110,11 @@ export async function summarizeNews(newsItems: NewsItem[]): Promise<SummaryItem[
 
   const newsText = newsItems
     .slice(0, 3)
-    .map((item, index) => `${index + 1}. ${item.title}\n${item.description || ""}`)
+    .map((item, index) => {
+      const title = decodeHtmlEntities(item.title);
+      const desc = item.description ? decodeHtmlEntities(item.description) : "";
+      return `${index + 1}. ${title}\n${desc}`;
+    })
     .join("\n\n");
 
   try {
@@ -98,8 +140,8 @@ export async function summarizeNews(newsItems: NewsItem[]): Promise<SummaryItem[
         if (Array.isArray(parsed) && parsed.length > 0) {
           // 最大3件に制限し、各項目を検証
           const limited = parsed.slice(0, 3).map((item: any) => ({
-            title: String(item.title || "タイトル不明").substring(0, 100),
-            summary: String(item.summary || "要約不明").substring(0, 50),
+            title: decodeHtmlEntities(String(item.title || "タイトル不明")).substring(0, 100),
+            summary: decodeHtmlEntities(String(item.summary || "要約不明")).substring(0, 50),
           }));
           return limited;
         }
@@ -123,7 +165,7 @@ export async function summarizeNews(newsItems: NewsItem[]): Promise<SummaryItem[
 }
 
 /**
- * 経済・技術ニュースを取得し、要約を生成・保存
+ * 経済・技術・一般ニュースを取得し、要約を生成・保存
  */
 export async function collectAndSummarizeGeneralNews(): Promise<void> {
   try {
@@ -142,6 +184,10 @@ export async function collectAndSummarizeGeneralNews(): Promise<void> {
     // 技術ニュース取得
     const techNews = await fetchGeneralNews("最新技術 社会実装");
     const techSummaries = await summarizeNews(techNews);
+
+    // 一般ニュース取得（政治・国際・社会）
+    const generalNews = await fetchGeneralNews("政治 国際 社会");
+    const generalSummaries = await summarizeNews(generalNews);
 
     // 今日の日付（UTC）
     const today = new Date();
@@ -162,6 +208,13 @@ export async function collectAndSummarizeGeneralNews(): Promise<void> {
       summaryDate: today,
       summaries: JSON.stringify(techSummaries),
       sourceType: "technology",
+    });
+
+    // 一般ニュース要約を保存
+    await db.insert(dailySummaries).values({
+      summaryDate: today,
+      summaries: JSON.stringify(generalSummaries),
+      sourceType: "general",
     });
 
     console.log("[General News] Collection and summarization completed");
@@ -190,10 +243,12 @@ export async function getTodaySummaries() {
 
     const economyData = summaries.find((s) => s.sourceType === "economy");
     const technologyData = summaries.find((s) => s.sourceType === "technology");
+    const generalData = summaries.find((s) => s.sourceType === "general");
 
     // JSON パース
     let economySummaries: SummaryItem[] = [];
     let techSummaries: SummaryItem[] = [];
+    let generalSummaries: SummaryItem[] = [];
 
     try {
       if (economyData?.summaries) {
@@ -201,6 +256,9 @@ export async function getTodaySummaries() {
       }
       if (technologyData?.summaries) {
         techSummaries = JSON.parse(technologyData.summaries);
+      }
+      if (generalData?.summaries) {
+        generalSummaries = JSON.parse(generalData.summaries);
       }
     } catch (parseError) {
       console.error("[General News] Error parsing summaries:", parseError);
@@ -210,6 +268,7 @@ export async function getTodaySummaries() {
       success: true,
       economy: economySummaries,
       technology: techSummaries,
+      general: generalSummaries,
     };
   } catch (error) {
     console.error("[General News] Error getting today's summaries:", error);

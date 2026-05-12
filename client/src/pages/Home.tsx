@@ -100,14 +100,14 @@ export default function Home() {
             <Loader2 className="w-5 h-5 animate-spin text-accent mr-2" />
             <span className="text-muted-foreground">主要ニュースを読み込み中...</span>
           </div>
-        ) : generalNewsData?.success && (Array.isArray(generalNewsData.economy) && generalNewsData.economy.length > 0 || Array.isArray(generalNewsData.technology) && generalNewsData.technology.length > 0) ? (
+        ) : generalNewsData?.success && (Array.isArray(generalNewsData.economy) && generalNewsData.economy.length > 0 || Array.isArray(generalNewsData.technology) && generalNewsData.technology.length > 0 || Array.isArray(generalNewsData.general) && generalNewsData.general.length > 0) ? (
           <Card className="mb-8 border-accent/30 bg-card/50">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-accent" />
-                <CardTitle className="text-lg text-foreground">今日の主要ニュース</CardTitle>
+                <CardTitle className="text-lg text-foreground">📊 今日の主要ニュース</CardTitle>
               </div>
-              <CardDescription>経済・最新技術の社会実装に関するニュース</CardDescription>
+              <CardDescription>経済・最新技術・社会ニュースの最重要情報</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {generalNewsData.economy && generalNewsData.economy.length > 0 && (
@@ -117,6 +117,12 @@ export default function Home() {
               {generalNewsData.technology && generalNewsData.technology.length > 0 && (
                 <div className={generalNewsData.economy && generalNewsData.economy.length > 0 ? "pt-2 border-t border-border/50" : ""}>
                   <SummarySection title="最新技術" icon="🚀" summaries={generalNewsData.technology} />
+                </div>
+              )}
+
+              {generalNewsData.general && generalNewsData.general.length > 0 && (
+                <div className={(generalNewsData.economy && generalNewsData.economy.length > 0) || (generalNewsData.technology && generalNewsData.technology.length > 0) ? "pt-2 border-t border-border/50" : ""}>
+                  <SummarySection title="一般ニュース" icon="🌍" summaries={generalNewsData.general} />
                 </div>
               )}
             </CardContent>
@@ -200,20 +206,16 @@ export default function Home() {
           >
             <CardHeader>
               <CardTitle className="text-foreground">{selectedItem.title}</CardTitle>
-              <CardDescription>{formatDate(selectedItem.pubDate)}</CardDescription>
+              <CardDescription className="text-muted-foreground">{formatDate(selectedItem.pubDate)}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <p className="text-sm text-foreground whitespace-pre-wrap">
-                  {selectedItem.content || selectedItem.contentSnippet}
-                </p>
-              </div>
+              <p className="text-foreground/80 leading-relaxed">{selectedItem.content || selectedItem.contentSnippet}</p>
               {selectedItem.link && (
                 <a
                   href={selectedItem.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/80 text-accent-foreground rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:opacity-90 transition-opacity"
                 >
                   元記事を読む
                   <ExternalLink className="w-4 h-4" />

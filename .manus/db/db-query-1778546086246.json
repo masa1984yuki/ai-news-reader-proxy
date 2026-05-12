@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `dailySummaries` MODIFY COLUMN `sourceType` enum('economy','technology','general') NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2qU3KtiP3y1JZrr.d329843b2cbb --database jPoxcXgUwJMfsoAGssFa4A --execute ALTER TABLE `dailySummaries` MODIFY COLUMN `sourceType` enum('economy','technology','general') NOT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1947
+}

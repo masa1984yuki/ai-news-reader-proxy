@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { scheduledCollectionHandler } from "../handlers/scheduledCollectionHandler";
 import { newsScheduleHandler } from "../handlers/newsScheduleHandler";
+import { handleGeneralNewsSummary } from "../handlers/generalNewsSummaryHandler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -42,6 +43,7 @@ async function startServer() {
   // Scheduled collection endpoints (must be before tRPC)
   app.post("/api/scheduled/collection", scheduledCollectionHandler);
   app.post("/api/scheduled/news", newsScheduleHandler);
+  app.post("/api/scheduled/general-news-summary", handleGeneralNewsSummary);
 
   // tRPC API
   app.use(

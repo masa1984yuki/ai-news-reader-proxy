@@ -85,3 +85,18 @@ export const collectionLogs = mysqlTable("collectionLogs", {
 
 export type CollectionLog = typeof collectionLogs.$inferSelect;
 export type InsertCollectionLog = typeof collectionLogs.$inferInsert;
+/**
+ * 主要ニュース要約テーブル
+ * 毎日の経済・技術ニュースをLLMで要約し保存
+ */
+export const dailySummaries = mysqlTable("dailySummaries", {
+  id: int("id").autoincrement().primaryKey(),
+  summaryDate: timestamp("summaryDate").notNull(), // 要約対象日
+  summaries: text("summaries").notNull(), // JSON形式で複数の要約を保存
+  sourceType: mysqlEnum("sourceType", ["economy", "technology"]).notNull(), // 経済または技術
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DailySummary = typeof dailySummaries.$inferSelect;
+export type InsertDailySummary = typeof dailySummaries.$inferInsert;

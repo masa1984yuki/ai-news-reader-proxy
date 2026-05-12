@@ -15,6 +15,13 @@
       "when": 1778454874181,
       "tag": "0001_fresh_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1778544526927,
+      "tag": "0002_bright_nehzno",
+      "breakpoints": true
     }
   ]
 }

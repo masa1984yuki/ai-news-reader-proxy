@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertCircle, ExternalLink, TrendingUp } from "lucide-react";
+import { Loader2, AlertCircle, ExternalLink, TrendingUp, Volume2, Square } from "lucide-react";
 
 interface NewsItem {
   title?: string;
@@ -22,6 +22,8 @@ interface SummaryItem {
 
 export default function Home() {
   const [selectedItem, setSelectedItem] = useState<NewsItem | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingItemIndex, setSpeakingItemIndex] = useState<number | null>(null);
 
   // tRPCでAIニュースを取得
   const { data: aiNewsData, isLoading, error } = trpc.rss.getAINews.useQuery();
@@ -49,8 +51,55 @@ export default function Home() {
     }
   };
 
-  const NewsCard = ({ item }: { item: NewsItem }) => {
+  const handleSpeak = (text: string, index: number) => {
+    if (isSpeaking && speakingItemIndex === index) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setSpeakingItemIndex(null);
+      return;
+    }
+
+    // 他の読み上げを停止
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "ja-JP";
+    utterance.rate = 1;
+    utterance.pitch = 1.2;
+    utterance.volume = 1;
+
+    // 女性の声を選択
+    const voices = window.speechSynthesis.getVoices();
+    const femaleVoice = voices.find(
+      (voice) => voice.lang.includes("ja") && voice.name.includes("Female")
+    ) || voices.find((voice) => voice.lang.includes("ja"));
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
+    }
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setSpeakingItemIndex(index);
+    };
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setSpeakingItemIndex(null);
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setSpeakingItemIndex(null);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const NewsCard = ({ item, index }: { item: NewsItem; index: number }) => {
     const sourceUrl = item.link || item.sourceUrl;
+    const isCurrentSpeaking = isSpeaking && speakingItemIndex === index;
+    const textToSpeak = `${item.title}。${item.contentSnippet || ""}`;
+
     return (
       <Card className="border-border/50 hover:shadow-lg transition-shadow">
         <CardHeader
@@ -63,18 +112,43 @@ export default function Home() {
         <CardContent>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground line-clamp-3">{item.contentSnippet}</p>
-            {sourceUrl && (
-              <a
-                href={sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-accent/10 text-accent hover:bg-accent/20 rounded transition-colors"
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSpeak(textToSpeak, index);
+                }}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded transition-colors ${
+                  isCurrentSpeaking
+                    ? "bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                    : "bg-accent/10 text-accent hover:bg-accent/20"
+                }`}
               >
-                ソース元へ
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
+                {isCurrentSpeaking ? (
+                  <>
+                    <Square className="w-3 h-3" />
+                    停止
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3 h-3" />
+                    読み上げ
+                  </>
+                )}
+              </button>
+              {sourceUrl && (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-accent/10 text-accent hover:bg-accent/20 rounded transition-colors"
+                >
+                  ソース元へ
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -191,7 +265,7 @@ export default function Home() {
               ) : (
                 <div className="grid gap-4">
                   {allAINews.map((item, index) => (
-                    <NewsCard key={index} item={item} />
+                    <NewsCard key={index} item={item} index={index} />
                   ))}
                 </div>
               )}
@@ -203,7 +277,7 @@ export default function Home() {
               ) : (
                 <div className="grid gap-4">
                   {claudeNews.map((item, index) => (
-                    <NewsCard key={index} item={item} />
+                    <NewsCard key={index} item={item} index={index} />
                   ))}
                 </div>
               )}
@@ -215,7 +289,7 @@ export default function Home() {
               ) : (
                 <div className="grid gap-4">
                   {chatgptNews.map((item, index) => (
-                    <NewsCard key={index} item={item} />
+                    <NewsCard key={index} item={item} index={index} />
                   ))}
                 </div>
               )}

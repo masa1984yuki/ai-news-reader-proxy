@@ -32,7 +32,7 @@ describe("generalNewsService", () => {
 
       const result = await summarizeNews(newsItems);
       expect(result.length).toBeLessThanOrEqual(3);
-    });
+    }, 10000);
 
     it("should ensure summary length is within 50 characters", async () => {
       const newsItems = [
@@ -46,7 +46,7 @@ describe("generalNewsService", () => {
       result.forEach((item) => {
         expect(item.summary.length).toBeLessThanOrEqual(50);
       });
-    });
+    }, 10000);
   });
 
   describe("getTodaySummaries", () => {

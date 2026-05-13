@@ -24,6 +24,8 @@ export default function Home() {
   const [selectedItem, setSelectedItem] = useState<NewsItem | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speakingItemIndex, setSpeakingItemIndex] = useState<number | null>(null);
+  const [isPlayingAll, setIsPlayingAll] = useState(false);
+  const [allSpeakingIndex, setAllSpeakingIndex] = useState<number | null>(null);
 
   // tRPCでAIニュースを取得
   const { data: aiNewsData, isLoading, error } = trpc.rss.getAINews.useQuery();
@@ -66,17 +68,28 @@ export default function Home() {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "ja-JP";
-    utterance.rate = 1;
-    utterance.pitch = 1.2;
+    utterance.rate = 0.9;  // より自然なスピード
+    utterance.pitch = 1.0; // より自然なピッチ
     utterance.volume = 1;
 
-    // 女性の声を選択
+    // 高品質な日本語音声を選択
     const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(
-      (voice) => voice.lang.includes("ja") && voice.name.includes("Female")
-    ) || voices.find((voice) => voice.lang.includes("ja"));
-    if (femaleVoice) {
-      utterance.voice = femaleVoice;
+    // Google Chromeの高品質音声を優先
+    let selectedVoice = voices.find(
+      (voice) => voice.lang === "ja-JP" && voice.name.includes("Google")
+    );
+    // Googleがない場合は女性の声を探す
+    if (!selectedVoice) {
+      selectedVoice = voices.find(
+        (voice) => voice.lang.includes("ja") && voice.name.includes("Female")
+      );
+    }
+    // それでもない場合は日本語の任意の音声
+    if (!selectedVoice) {
+      selectedVoice = voices.find((voice) => voice.lang.includes("ja"));
+    }
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
     }
 
     utterance.onstart = () => {
@@ -93,6 +106,65 @@ export default function Home() {
     };
 
     window.speechSynthesis.speak(utterance);
+  };
+  const handleSpeakAll = (newsItems: NewsItem[]) => {
+    if (isPlayingAll) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAll(false);
+      setAllSpeakingIndex(null);
+      return;
+    }
+
+    const speakNextItem = (index: number) => {
+      if (index >= newsItems.length) {
+        setIsPlayingAll(false);
+        setAllSpeakingIndex(null);
+        return;
+      }
+
+      const item = newsItems[index];
+      const text = `${item.title}。${item.contentSnippet || ""}`;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "ja-JP";
+      utterance.rate = 0.9;  // より自然なスピード
+      utterance.pitch = 1.0; // より自然なピッチ
+      utterance.volume = 1;
+
+      const voices = window.speechSynthesis.getVoices();
+      // Google Chromeの高品質音声を優先
+      let selectedVoice = voices.find(
+        (voice) => voice.lang === "ja-JP" && voice.name.includes("Google")
+      );
+      // Googleがない場合は女性の声を探す
+      if (!selectedVoice) {
+        selectedVoice = voices.find(
+          (voice) => voice.lang.includes("ja") && voice.name.includes("Female")
+        );
+      }
+      // それでもない場合は日本語の任意の音声
+      if (!selectedVoice) {
+        selectedVoice = voices.find((voice) => voice.lang.includes("ja"));
+      }
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+
+      utterance.onstart = () => {
+        setIsPlayingAll(true);
+        setAllSpeakingIndex(index);
+      };
+      utterance.onend = () => {
+        speakNextItem(index + 1);
+      };
+      utterance.onerror = () => {
+        setIsPlayingAll(false);
+        setAllSpeakingIndex(null);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speakNextItem(0);
   };
 
   const NewsCard = ({ item, index }: { item: NewsItem; index: number }) => {
@@ -111,7 +183,7 @@ export default function Home() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground line-clamp-3">{item.contentSnippet}</p>
+            <p className="text-sm text-muted-foreground line-clamp-5">{item.contentSnippet}</p>
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={(e) => {
@@ -252,14 +324,35 @@ export default function Home() {
         )}
 
         {!isLoading && !error && (
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-card">
-              <TabsTrigger value="all">すべて</TabsTrigger>
-              <TabsTrigger value="claude">Claude関連</TabsTrigger>
-              <TabsTrigger value="chatgpt">ChatGPT関連</TabsTrigger>
-            </TabsList>
+          <div className="space-y-4">
+            <button
+              onClick={() => handleSpeakAll(allAINews)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded transition-colors ${
+                isPlayingAll
+                  ? "bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                  : "bg-accent/10 text-accent hover:bg-accent/20"
+              }`}
+            >
+              {isPlayingAll ? (
+                <>
+                  <Square className="w-4 h-4" />
+                  すべて停止
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-4 h-4" />
+                  すべて読み上げ
+                </>
+              )}
+            </button>
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 bg-card">
+                <TabsTrigger value="all">すべて</TabsTrigger>
+                <TabsTrigger value="claude">Claude関連</TabsTrigger>
+                <TabsTrigger value="chatgpt">ChatGPT関連</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="all" className="space-y-4 mt-6">
+              <TabsContent value="all" className="space-y-4 mt-6">
               {allAINews.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">ニュースがありません</p>
               ) : (
@@ -293,8 +386,9 @@ export default function Home() {
                   ))}
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
       </div>
 

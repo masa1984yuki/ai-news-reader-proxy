@@ -26,6 +26,7 @@ export default function Home() {
   const [speakingItemIndex, setSpeakingItemIndex] = useState<number | null>(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [allSpeakingIndex, setAllSpeakingIndex] = useState<number | null>(null);
+  const [optimizationCache, setOptimizationCache] = useState<Record<string, string>>({});
 
   // tRPCでAIニュースを取得
   const { data: aiNewsData, isLoading, error } = trpc.rss.getAINews.useQuery();
@@ -33,6 +34,9 @@ export default function Home() {
   // 一般ニュース要約を取得
   const { data: generalNewsData, isLoading: generalLoading } =
     trpc.generalNews.getTodaySummaries.useQuery();
+
+  // LLM 最適化エンドポイント
+  const optimizeTextMutation = trpc.news.optimizeTextForSpeech.useMutation();
 
   const claudeNews: NewsItem[] = aiNewsData?.claude || [];
   const chatgptNews: NewsItem[] = aiNewsData?.chatgpt || [];
@@ -53,7 +57,7 @@ export default function Home() {
     }
   };
 
-  const handleSpeak = (text: string, index: number) => {
+  const handleSpeak = async (text: string, index: number, title?: string) => {
     if (isSpeaking && speakingItemIndex === index) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
@@ -66,7 +70,32 @@ export default function Home() {
       window.speechSynthesis.cancel();
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // LLM で最適化されたテキストをキャッシュから取得
+    const cacheKey = `${title || text}`;
+    let optimizedText = optimizationCache[cacheKey];
+
+    if (!optimizedText) {
+      try {
+        const result = await optimizeTextMutation.mutateAsync({
+          title: title || "記事",
+          text: text,
+        });
+        if (result.success) {
+          optimizedText = `${result.optimizedTitle}。${result.optimizedText}`;
+          setOptimizationCache((prev) => ({
+            ...prev,
+            [cacheKey]: optimizedText,
+          }));
+        } else {
+          optimizedText = text;
+        }
+      } catch (error) {
+        console.error("Error optimizing text:", error);
+        optimizedText = text;
+      }
+    }
+
+    const utterance = new SpeechSynthesisUtterance(optimizedText);
     utterance.lang = "ja-JP";
     utterance.rate = 0.9;  // より自然なスピード
     utterance.pitch = 1.0; // より自然なピッチ
